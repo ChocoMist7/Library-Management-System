@@ -9,7 +9,150 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      book_issues: {
+        Row: {
+          actual_return_date: string | null
+          book_id: string
+          created_at: string | null
+          id: string
+          issue_date: string
+          remarks: string | null
+          return_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          actual_return_date?: string | null
+          book_id: string
+          created_at?: string | null
+          id?: string
+          issue_date?: string
+          remarks?: string | null
+          return_date: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          actual_return_date?: string | null
+          book_id?: string
+          created_at?: string | null
+          id?: string
+          issue_date?: string
+          remarks?: string | null
+          return_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_issues_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_issues_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      books: {
+        Row: {
+          author: string
+          available_copies: number
+          category: string
+          cover_image_url: string | null
+          created_at: string | null
+          id: string
+          isbn: string
+          publication_year: number
+          publisher: string
+          title: string
+          total_copies: number
+          unique_book_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          author: string
+          available_copies?: number
+          category: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          id?: string
+          isbn: string
+          publication_year: number
+          publisher: string
+          title: string
+          total_copies?: number
+          unique_book_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          author?: string
+          available_copies?: number
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          id?: string
+          isbn?: string
+          publication_year?: number
+          publisher?: string
+          title?: string
+          total_copies?: number
+          unique_book_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          degree: string | null
+          department: string | null
+          email: string
+          id: string
+          name: string
+          role: string
+          roll_number: string | null
+          staff_id: string | null
+          stream: string | null
+          teacher_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          degree?: string | null
+          department?: string | null
+          email: string
+          id: string
+          name: string
+          role: string
+          roll_number?: string | null
+          staff_id?: string | null
+          stream?: string | null
+          teacher_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          degree?: string | null
+          department?: string | null
+          email?: string
+          id?: string
+          name?: string
+          role?: string
+          roll_number?: string | null
+          staff_id?: string | null
+          stream?: string | null
+          teacher_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

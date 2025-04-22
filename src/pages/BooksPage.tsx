@@ -1,6 +1,5 @@
 
-import { useState } from "react";
-import { books } from "@/lib/data";
+import { useState, useEffect } from "react";
 import { BookCard } from "@/components/books/book-card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -14,64 +13,70 @@ import {
 } from "@/components/ui/select";
 import { Book } from "@/lib/types";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function BooksPage() {
-  const [displayedBooks, setDisplayedBooks] = useState<Book[]>(books);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [displayedBooks, setDisplayedBooks] = useState<Book[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [categories, setCategories] = useState<string[]>(["all"]);
+  const [loading, setLoading] = useState(true);
 
-  const categories = ["all", ...Array.from(new Set(books.map(book => book.category)))];
+  // Fetch books from Supabase
+  useEffect(() => {
+    async function fetchBooks() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("books")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data) {
+        const booksFromDb = data.map((b: any) => ({
+          ...b,
+          id: b.id,
+          uniqueBookId: b.unique_book_id,
+          publicationYear: b.publication_year,
+          totalCopies: b.total_copies,
+          availableCopies: b.available_copies,
+          coverImageUrl: b.cover_image_url,
+          addedAt: new Date(b.created_at),
+          updatedAt: new Date(b.updated_at),
+        }));
+        setBooks(booksFromDb);
+        setDisplayedBooks(booksFromDb);
+        setCategories([
+          "all",
+          ...Array.from(new Set(booksFromDb.map((book) => book.category))),
+        ]);
+      }
+      setLoading(false);
+    }
+    fetchBooks();
+  }, []);
+
+  // Filter logic (same as before, but uses books from state)
+  useEffect(() => {
+    let filtered = [...books];
+    if (filterCategory !== "all") {
+      filtered = filtered.filter((book) => book.category === filterCategory);
+    }
+    if (searchTerm.trim() !== "") {
+      filtered = filtered.filter((book) =>
+        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.uniqueBookId.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    setDisplayedBooks(filtered);
+  }, [books, filterCategory, searchTerm]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    
-    if (term.trim() === "") {
-      handleFilterChange(filterCategory);
-    } else {
-      const filtered = books.filter(book => {
-        const matchesSearch = 
-          book.title.toLowerCase().includes(term.toLowerCase()) ||
-          book.author.toLowerCase().includes(term.toLowerCase()) ||
-          book.uniqueBookId.toLowerCase().includes(term.toLowerCase());
-          
-        const matchesCategory = filterCategory === "all" || book.category === filterCategory;
-        
-        return matchesSearch && matchesCategory;
-      });
-      
-      setDisplayedBooks(filtered);
-    }
+    setSearchTerm(e.target.value);
   };
 
   const handleFilterChange = (category: string) => {
     setFilterCategory(category);
-    
-    if (category === "all") {
-      if (searchTerm) {
-        const filtered = books.filter(book => 
-          book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          book.uniqueBookId.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setDisplayedBooks(filtered);
-      } else {
-        setDisplayedBooks(books);
-      }
-    } else {
-      const filtered = books.filter(book => {
-        const matchesCategory = book.category === category;
-        
-        const matchesSearch = !searchTerm || 
-          book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          book.uniqueBookId.toLowerCase().includes(searchTerm.toLowerCase());
-          
-        return matchesCategory && matchesSearch;
-      });
-      
-      setDisplayedBooks(filtered);
-    }
   };
 
   return (
@@ -115,8 +120,11 @@ export default function BooksPage() {
           </Select>
         </div>
       </div>
-
-      {displayedBooks.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <p className="mb-2 text-muted-foreground">Loading books…</p>
+        </div>
+      ) : displayedBooks.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <p className="mb-2 text-muted-foreground">No books found</p>
           <p className="text-sm text-muted-foreground">

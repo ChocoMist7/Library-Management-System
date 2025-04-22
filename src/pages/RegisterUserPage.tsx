@@ -5,31 +5,52 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useNavigate } from "react-router-dom";
 import { User } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function RegisterUserPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleRegisterUser = (data: Partial<User>) => {
+  const handleRegisterUser = async (data: Partial<User>) => {
     setIsSubmitting(true);
-    
-    // In a real application, you would send this data to a server
-    // For now, we'll simulate a server delay and success
-    setTimeout(() => {
-      // Log the new user
-      console.log("User registered:", data);
-      
-      // Show success message
-      toast({
-        title: "User registered",
-        description: `${data.name} has been successfully registered.`,
-      });
-      
+
+    // The correct method is to invite/add an auth user, but for demo, we'll just insert profile.
+    const fakeEmail = data.email || "";
+    const userData: any = {
+      name: data.name || "",
+      role: data.role,
+      email: fakeEmail,
+      avatar_url: data.imageUrl ?? null,
+      created_at: new Date().toISOString(),
+    };
+
+    // Role-specific fields
+    if (data.role === "student") {
+      userData.roll_number = (data as any).rollNumber || "";
+      userData.degree = (data as any).degree || "";
+      userData.stream = (data as any).stream || "";
+    } else if (data.role === "teacher") {
+      userData.teacher_id = (data as any).teacherId || "";
+      userData.department = (data as any).department || "";
+    } else if (data.role === "librarian") {
+      userData.staff_id = (data as any).staffId || "";
+    }
+
+    const { error } = await supabase.from("profiles").insert([userData]);
+
+    if (error) {
+      toast({ title: "Error registering user", description: error.message });
       setIsSubmitting(false);
-      
-      // Redirect to users page
-      navigate("/users");
-    }, 1000);
+      return;
+    }
+
+    toast({
+      title: "User registered",
+      description: `${userData.name} has been successfully registered.`,
+    });
+
+    setIsSubmitting(false);
+    navigate("/users");
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { generateBookId } from "@/lib/data";
 
 interface BookFormProps {
   initialData?: Partial<Book>;
-  onSubmit: (data: Partial<Book>) => void;
+  onSubmit: (data: Partial<Book> & { coverImageFile?: File }) => void;
   isSubmitting?: boolean;
 }
 
@@ -27,7 +26,8 @@ export function BookForm({
     publisher: initialData.publisher || "",
     totalCopies: initialData.totalCopies || 1,
     description: initialData.description || "",
-    coverImageUrl: initialData.coverImageUrl || ""
+    coverImageUrl: initialData.coverImageUrl || "",
+    coverImageFile: undefined as File | undefined,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,32 +41,32 @@ export function BookForm({
     if (!formData.category.trim()) newErrors.category = "Category is required";
     if (!formData.publisher.trim()) newErrors.publisher = "Publisher is required";
     if (formData.totalCopies < 1) newErrors.totalCopies = "At least 1 copy is required";
-    
-    // Basic URL validation for cover image
-    if (formData.coverImageUrl) {
-      try {
-        new URL(formData.coverImageUrl);
-      } catch (err) {
-        newErrors.coverImageUrl = "Please enter a valid URL";
-      }
-    }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === "totalCopies" || name === "publicationYear" 
-        ? parseInt(value, 10) || 0 
-        : value
-    }));
-    
-    // Clear error when field is changed
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, files } = e.target as any;
+    if (name === "coverImageFile" && files && files.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        coverImageFile: files[0],
+        coverImageUrl: URL.createObjectURL(files[0]),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: name === "totalCopies" || name === "publicationYear"
+          ? parseInt(value, 10) || 0
+          : value,
+      }));
+    }
+
     if (errors[name]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name];
         return newErrors;
@@ -76,17 +76,17 @@ export function BookForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
-    const submissionData: Partial<Book> = {
+
+    const submissionData: Partial<Book> & { coverImageFile?: File } = {
       ...formData,
       uniqueBookId: initialData.uniqueBookId || generateBookId(),
       availableCopies: initialData.availableCopies !== undefined
         ? initialData.availableCopies
-        : formData.totalCopies
+        : formData.totalCopies,
+      coverImageFile: formData.coverImageFile,
     };
-    
+
     onSubmit(submissionData);
   };
 
@@ -206,23 +206,6 @@ export function BookForm({
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="coverImageUrl" className={errors.coverImageUrl ? "text-destructive" : ""}>
-            Cover Image URL
-          </Label>
-          <Input
-            id="coverImageUrl"
-            name="coverImageUrl"
-            value={formData.coverImageUrl}
-            onChange={handleChange}
-            placeholder="https://example.com/book-cover.jpg"
-            className={errors.coverImageUrl ? "border-destructive" : ""}
-          />
-          {errors.coverImageUrl && (
-            <p className="text-xs text-destructive">{errors.coverImageUrl}</p>
-          )}
-        </div>
-
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="description">
             Description
@@ -235,8 +218,31 @@ export function BookForm({
             rows={4}
           />
         </div>
-      </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="coverImageFile" className={errors.coverImageUrl ? "text-destructive" : ""}>
+            Cover Image (upload)
+          </Label>
+          <Input
+            id="coverImageFile"
+            name="coverImageFile"
+            type="file"
+            accept="image/*"
+            onChange={handleChange}
+            className={errors.coverImageUrl ? "border-destructive" : ""}
+          />
+          {formData.coverImageUrl && (
+            <img
+              src={formData.coverImageUrl as string}
+              alt="Preview"
+              className="h-24 mt-2"
+            />
+          )}
+          {errors.coverImageUrl && (
+            <p className="text-xs text-destructive">{errors.coverImageUrl}</p>
+          )}
+        </div>
+      </div>
       <div className="flex justify-end gap-4">
         <Button type="submit" disabled={isSubmitting}>
           {initialData.id ? "Update Book" : "Add Book"}

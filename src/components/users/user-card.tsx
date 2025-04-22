@@ -1,9 +1,10 @@
-
+import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Student, Teacher, Librarian, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { UserIssuedBooks } from "./user-issued-books";
 
 interface UserCardProps {
   user: User;
@@ -13,9 +14,9 @@ interface UserCardProps {
 }
 
 export function UserCard({ user, className, onEdit, onDelete }: UserCardProps) {
-  // Determine user-specific details based on role
+  const [showIssuedModal, setShowIssuedModal] = useState(false);
+
   let roleSpecificDetails = null;
-  
   if (user.role === "student") {
     const student = user as Student;
     roleSpecificDetails = (
@@ -44,6 +45,9 @@ export function UserCard({ user, className, onEdit, onDelete }: UserCardProps) {
 
   return (
     <Card className={cn("overflow-hidden transition-all hover:shadow-md", className)}>
+      {showIssuedModal && (
+        <UserIssuedBooks userId={user.id} userName={user.name} onClose={() => setShowIssuedModal(false)} />
+      )}
       <CardHeader className="p-0">
         <div className="relative h-40 w-full bg-muted">
           <img
@@ -72,6 +76,9 @@ export function UserCard({ user, className, onEdit, onDelete }: UserCardProps) {
       <CardContent className="p-4 space-y-2">
         <p><span className="font-medium">Email:</span> {user.email}</p>
         {roleSpecificDetails}
+        <Button variant="outline" size="sm" onClick={() => setShowIssuedModal(true)}>
+          View Issued Books
+        </Button>
       </CardContent>
       {(onEdit || onDelete) && (
         <CardFooter className="p-4 pt-0 flex gap-2 justify-end">

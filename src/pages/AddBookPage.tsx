@@ -5,49 +5,65 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useNavigate } from "react-router-dom";
 import { Book } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
-import { generateId } from "@/lib/data";
+import { supabase } from "@/integrations/supabase/client";
+import { generateBookId } from "@/lib/data";
+import { uploadFile } from "@/lib/supabase-upload";
 
 export default function AddBookPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddBook = (data: Partial<Book>) => {
+  const handleAddBook = async (data: Partial<Book>) => {
     setIsSubmitting(true);
-    
-    // In a real application, you would send this data to a server
-    // For now, we'll simulate a server delay and success
-    setTimeout(() => {
-      // Create a new book with the form data
-      const newBook: Book = {
-        id: generateId(),
-        uniqueBookId: data.uniqueBookId || "",
+
+    let coverImageUrl = "";
+    // Handle image upload if there's a file
+    if (data.coverImageFile) {
+      const { url, error: uploadError } = await uploadFile("book-covers", data.coverImageFile);
+      if (uploadError) {
+        toast({
+          title: "Image upload failed",
+          description: uploadError.message,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      coverImageUrl = url;
+    }
+
+    // Insert new book into Supabase
+    const { error } = await supabase.from("books").insert([
+      {
+        unique_book_id: data.uniqueBookId || generateBookId(),
         title: data.title || "",
         author: data.author || "",
         isbn: data.isbn || "",
         category: data.category || "",
-        publicationYear: data.publicationYear || new Date().getFullYear(),
+        publication_year: data.publicationYear || new Date().getFullYear(),
         publisher: data.publisher || "",
-        totalCopies: data.totalCopies || 1,
-        availableCopies: data.totalCopies || 1,
-        coverImageUrl: data.coverImageUrl || "",
+        total_copies: data.totalCopies || 1,
+        available_copies: data.totalCopies || 1,
+        cover_image_url: coverImageUrl,
         description: data.description,
-        addedAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      console.log("Book added:", newBook);
-      
-      // Show success message
+      },
+    ]);
+
+    if (error) {
       toast({
-        title: "Book added",
-        description: `"${newBook.title}" has been added to the library.`,
+        title: "Error adding book",
+        description: error.message,
       });
-      
       setIsSubmitting(false);
-      
-      // Redirect to books page
-      navigate("/books");
-    }, 1000);
+      return;
+    }
+
+    toast({
+      title: "Book added",
+      description: `"${data.title}" has been added to the library.`,
+    });
+
+    setIsSubmitting(false);
+    navigate("/books");
   };
 
   return (

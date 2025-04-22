@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserCard } from "@/components/users/user-card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -12,63 +12,67 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { allUsers } from "@/lib/data";
 import { User, UserRole } from "@/lib/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 export default function UsersPage() {
-  const [displayedUsers, setDisplayedUsers] = useState<User[]>(allUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
   const [filterRole, setFilterRole] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const roles = ["all", "student", "teacher", "librarian"];
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    
-    if (term.trim() === "") {
-      handleFilterChange(filterRole);
-    } else {
-      const filtered = allUsers.filter(user => {
-        const matchesSearch = 
-          user.name.toLowerCase().includes(term.toLowerCase()) ||
-          user.email.toLowerCase().includes(term.toLowerCase());
-          
-        const matchesRole = filterRole === "all" || user.role === filterRole;
-        
-        return matchesSearch && matchesRole;
-      });
-      
-      setDisplayedUsers(filtered);
+  useEffect(() => {
+    async function fetchUsers() {
+      const { data, error } = await supabase.from("profiles").select("*");
+      if (data && !error) {
+        const usersFromDb = data.map((u: any) => ({
+          ...u,
+          imageUrl: u.avatar_url,
+          createdAt: new Date(u.created_at),
+        }));
+        setUsers(usersFromDb);
+        setDisplayedUsers(usersFromDb);
+      }
     }
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    let filtered = [...users];
+    if (filterRole !== "all") {
+      filtered = filtered.filter((user) => user.role === filterRole);
+    }
+    if (searchTerm.trim() !== "") {
+      filtered = filtered.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    setDisplayedUsers(filtered);
+  }, [users, filterRole, searchTerm]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
   const handleFilterChange = (role: string) => {
     setFilterRole(role);
-    
-    if (role === "all") {
-      if (searchTerm) {
-        const filtered = allUsers.filter(user => 
-          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setDisplayedUsers(filtered);
-      } else {
-        setDisplayedUsers(allUsers);
-      }
-    } else {
-      const filtered = allUsers.filter(user => {
-        const matchesRole = user.role === role as UserRole;
-        
-        const matchesSearch = !searchTerm || 
-          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-          
-        return matchesRole && matchesSearch;
-      });
-      
-      setDisplayedUsers(filtered);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm("Are you sure you want to remove this user?")) return;
+    const { error } = await supabase.from("profiles").delete().eq("id", userId);
+    if (error) {
+      toast({ title: "Error deleting user", description: error.message });
+      return;
     }
+    setUsers(users.filter((u) => u.id !== userId));
+    setDisplayedUsers(displayedUsers.filter((u) => u.id !== userId));
+    toast({ title: "User removed", description: "User has been deleted." });
   };
 
   return (
@@ -76,9 +80,7 @@ export default function UsersPage() {
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground">
-            Manage students, teachers and librarians
-          </p>
+          <p className="text-muted-foreground">Manage students, teachers and librarians</p>
         </div>
         <Button asChild>
           <Link to="/users/register">
@@ -87,7 +89,6 @@ export default function UsersPage() {
           </Link>
         </Button>
       </div>
-
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="flex-1">
           <Input
@@ -105,8 +106,9 @@ export default function UsersPage() {
             <SelectContent>
               {roles.map((role) => (
                 <SelectItem key={role} value={role}>
-                  {role === "all" ? "All Roles" : 
-                   role.charAt(0).toUpperCase() + role.slice(1) + "s"}
+                  {role === "all"
+                    ? "All Roles"
+                    : role.charAt(0).toUpperCase() + role.slice(1) + "s"}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -124,10 +126,7 @@ export default function UsersPage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {displayedUsers.map((user) => (
-            <UserCard
-              key={user.id}
-              user={user}
-            />
+            <UserCard key={user.id} user={user} onDelete={() => handleDeleteUser(user.id)} />
           ))}
         </div>
       )}

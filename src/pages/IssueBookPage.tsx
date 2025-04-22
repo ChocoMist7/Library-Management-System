@@ -2,57 +2,75 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { IssueBookForm } from "@/components/books/issue-book-form";
-import { books } from "@/lib/data";
-import { BookIssue, Book } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
-import { generateId } from "@/lib/data";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function IssueBookPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [book, setBook] = useState<Book | null>(null);
+  const [book, setBook] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Fetch book details
-    const foundBook = books.find(b => b.id === id);
-    setBook(foundBook || null);
-    setIsLoading(false);
+    async function fetchBook() {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("books")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (!error && data) {
+        setBook({
+          ...data,
+          id: data.id,
+          uniqueBookId: data.unique_book_id,
+          publicationYear: data.publication_year,
+          totalCopies: data.total_copies,
+          availableCopies: data.available_copies,
+          coverImageUrl: data.cover_image_url,
+          addedAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+        });
+      } else {
+        setBook(null);
+      }
+      setIsLoading(false);
+    }
+    fetchBook();
   }, [id]);
 
-  const handleIssueBook = (data: Partial<BookIssue>) => {
+  const handleIssueBook = async (formData: any) => {
     if (!book) return;
-    
+
     setIsSubmitting(true);
-    
-    // In a real application, you would send this data to a server
-    // For now, we'll simulate a server delay and success
-    setTimeout(() => {
-      // Create a new book issue with the form data
-      const newIssue: BookIssue = {
-        id: generateId(),
-        bookId: book.id,
-        uniqueBookId: book.uniqueBookId,
-        userId: data.userId || "",
-        issueDate: data.issueDate || new Date(),
-        returnDate: data.returnDate || new Date(),
+
+    const { error } = await supabase.from("book_issues").insert([
+      {
+        book_id: book.id,
+        user_id: formData.userId,
+        issue_date: formData.issueDate,
+        return_date: formData.returnDate,
         status: "issued",
-      };
-      
-      console.log("Book issued:", newIssue);
-      
-      // Show success message
+      },
+    ]);
+    if (error) {
       toast({
-        title: "Book issued",
-        description: `"${book.title}" has been issued successfully.`,
+        title: "Error issuing book",
+        description: error.message,
       });
-      
       setIsSubmitting(false);
-      
-      // Redirect to books page
-      navigate("/books");
-    }, 1000);
+      return;
+    }
+
+    toast({
+      title: "Book issued",
+      description: `"${book.title}" has been issued successfully.`,
+    });
+
+    setIsSubmitting(false);
+    navigate("/books");
   };
 
   const handleCancel = () => {

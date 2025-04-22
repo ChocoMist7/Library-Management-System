@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,8 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Book, User, BookIssue } from "@/lib/types";
-import { allUsers } from "@/lib/data";
+import { Book, BookIssue, User } from "@/lib/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface IssueBookFormProps {
   book: Book;
@@ -27,6 +27,7 @@ export function IssueBookForm({
   onCancel,
   isSubmitting = false,
 }: IssueBookFormProps) {
+  const [users, setUsers] = useState<User[]>([]);
   const [userId, setUserId] = useState("");
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -38,14 +39,34 @@ export function IssueBookForm({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Fetch users from Supabase
+  useEffect(() => {
+    async function fetchUsers() {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*");
+      if (data && !error) {
+        setUsers(
+          data.map((u: any) => ({
+            ...u,
+            id: u.id,
+            name: u.name,
+            imageUrl: u.avatar_url,
+            role: u.role,
+            email: u.email,
+            createdAt: new Date(u.created_at),
+          }))
+        );
+      }
+    }
+    fetchUsers();
+  }, []);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!userId) newErrors.userId = "User is required";
     if (!issueDate) newErrors.issueDate = "Issue date is required";
     if (!returnDate) newErrors.returnDate = "Return date is required";
-
-    // Validate dates
     if (issueDate && returnDate) {
       const issue = new Date(issueDate);
       const returnD = new Date(returnDate);
@@ -53,16 +74,13 @@ export function IssueBookForm({
         newErrors.returnDate = "Return date must be after issue date";
       }
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
-
     onSubmit({
       bookId: book.id,
       uniqueBookId: book.uniqueBookId,
@@ -74,7 +92,7 @@ export function IssueBookForm({
   };
 
   // Find user by ID
-  const selectedUser = allUsers.find((user) => user.id === userId);
+  const selectedUser = users.find((user) => user.id === userId);
 
   return (
     <Card>
@@ -110,7 +128,7 @@ export function IssueBookForm({
                   <SelectValue placeholder="Select a user" />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
-                  {allUsers.map((user) => (
+                  {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name} ({user.role})
                     </SelectItem>
@@ -126,23 +144,13 @@ export function IssueBookForm({
               <div className="p-4 bg-muted rounded-md">
                 <div className="flex items-center gap-3">
                   <img
-                    src={selectedUser.imageUrl}
+                    src={selectedUser.imageUrl || "https://via.placeholder.com/200x200?text=No+Image"}
                     alt={selectedUser.name}
                     className="h-12 w-12 rounded-full object-cover"
                   />
                   <div>
                     <h4 className="font-semibold">{selectedUser.name}</h4>
                     <p className="text-sm capitalize">{selectedUser.role}</p>
-                    {selectedUser.role === "student" && (
-                      <p className="text-xs">
-                        Roll: {(selectedUser as any).rollNumber}
-                      </p>
-                    )}
-                    {selectedUser.role === "teacher" && (
-                      <p className="text-xs">
-                        ID: {(selectedUser as any).teacherId}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
@@ -188,7 +196,6 @@ export function IssueBookForm({
               </div>
             </div>
           </div>
-
           <div className="flex justify-end gap-4">
             <Button variant="outline" onClick={onCancel} type="button">
               Cancel
