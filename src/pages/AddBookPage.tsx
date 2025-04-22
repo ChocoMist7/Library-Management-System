@@ -24,7 +24,14 @@ export default function AddBookPage() {
         try {
           const { url, error } = await uploadFile("books", data.coverImageFile);
           if (error) {
-            throw error;
+            console.error("Upload error details:", error);
+            toast({
+              title: "Image Upload Failed",
+              description: `Could not upload the book cover image: ${error.message}`,
+              variant: "destructive",
+            });
+            setIsSubmitting(false);
+            return;
           }
           coverImageUrl = url;
         } catch (uploadError) {
@@ -102,4 +109,3 @@ export default function AddBookPage() {
     </div>
   );
 }
-
