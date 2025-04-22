@@ -1,4 +1,3 @@
-
 // Type definitions for the Library Management System
 
 // User types
@@ -9,6 +8,7 @@ export interface User {
   name: string;
   role: UserRole;
   imageUrl: string;
+  imageFile?: File; // For temporary file storage during upload
   email: string;
   createdAt: Date;
 }

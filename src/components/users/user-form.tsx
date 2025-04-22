@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +29,8 @@ export function UserForm({
     email: initialData.email || "",
     role: initialData.role || "student" as UserRole,
     imageUrl: initialData.imageUrl || "",
-    
+    imageFile: null as File | null,
+
     // Student-specific fields
     rollNumber: (initialData as Partial<Student>)?.rollNumber || "",
     degree: (initialData as Partial<Student>)?.degree || "",
@@ -88,8 +88,12 @@ export function UserForm({
     setFormData(prev => ({ ...prev, role }));
   };
 
-  const handleImageChange = (imageUrl: string) => {
-    setFormData(prev => ({ ...prev, imageUrl }));
+  const handleImageChange = (imageUrl: string, imageFile?: File) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      imageUrl,
+      imageFile: imageFile || null
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -104,6 +108,7 @@ export function UserForm({
       name: formData.name,
       email: formData.email,
       imageUrl: formData.imageUrl,
+      imageFile: formData.imageFile,
       createdAt: new Date()
     };
     
@@ -193,13 +198,12 @@ export function UserForm({
           )}
         </div>
         
-        {/* Role selection */}
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="role">Role</Label>
           <Select 
             value={formData.role} 
             onValueChange={(value: UserRole) => handleRoleChange(value)}
-            disabled={!!initialData.id} // Disable role change for existing users
+            disabled={!!initialData.id}
           >
             <SelectTrigger id="role">
               <SelectValue placeholder="Select a role" />
@@ -212,7 +216,6 @@ export function UserForm({
           </Select>
         </div>
         
-        {/* Role-specific fields */}
         {formData.role === "student" && (
           <>
             <div className="space-y-2">
@@ -322,7 +325,7 @@ export function UserForm({
 
       <div className="flex justify-end gap-4">
         <Button type="submit" disabled={isSubmitting}>
-          {initialData.id ? "Update User" : "Register User"}
+          {isSubmitting ? "Processing..." : initialData.id ? "Update User" : "Register User"}
         </Button>
       </div>
     </form>

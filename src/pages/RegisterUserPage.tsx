@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { User } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadFile } from "@/lib/supabase-upload";
 
 export default function RegisterUserPage() {
   const navigate = useNavigate();
@@ -14,43 +15,87 @@ export default function RegisterUserPage() {
   const handleRegisterUser = async (data: Partial<User>) => {
     setIsSubmitting(true);
 
-    // The correct method is to invite/add an auth user, but for demo, we'll just insert profile.
-    const fakeEmail = data.email || "";
-    const userData: any = {
-      name: data.name || "",
-      role: data.role,
-      email: fakeEmail,
-      avatar_url: data.imageUrl ?? null,
-      created_at: new Date().toISOString(),
-    };
+    try {
+      // Handle image upload if there's a file
+      let avatarUrl = data.imageUrl || null;
+      
+      if (data.imageFile instanceof File) {
+        try {
+          const { url, error } = await uploadFile("avatars", data.imageFile);
+          if (error) {
+            console.error("Avatar upload error details:", error);
+            toast({
+              title: "Image Upload Failed",
+              description: `Could not upload the profile image: ${error.message}`,
+              variant: "destructive",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+          avatarUrl = url;
+        } catch (uploadError) {
+          console.error("Image upload error:", uploadError);
+          toast({
+            title: "Image Upload Failed",
+            description: "Could not upload the profile image. Please try again.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
-    // Role-specific fields
-    if (data.role === "student") {
-      userData.roll_number = (data as any).rollNumber || "";
-      userData.degree = (data as any).degree || "";
-      userData.stream = (data as any).stream || "";
-    } else if (data.role === "teacher") {
-      userData.teacher_id = (data as any).teacherId || "";
-      userData.department = (data as any).department || "";
-    } else if (data.role === "librarian") {
-      userData.staff_id = (data as any).staffId || "";
-    }
+      // The correct method is to invite/add an auth user, but for demo, we'll just insert profile.
+      const fakeEmail = data.email || "";
+      const userData: any = {
+        name: data.name || "",
+        role: data.role,
+        email: fakeEmail,
+        avatar_url: avatarUrl,
+        created_at: new Date().toISOString(),
+      };
 
-    const { error } = await supabase.from("profiles").insert([userData]);
+      // Role-specific fields
+      if (data.role === "student") {
+        userData.roll_number = (data as any).rollNumber || "";
+        userData.degree = (data as any).degree || "";
+        userData.stream = (data as any).stream || "";
+      } else if (data.role === "teacher") {
+        userData.teacher_id = (data as any).teacherId || "";
+        userData.department = (data as any).department || "";
+      } else if (data.role === "librarian") {
+        userData.staff_id = (data as any).staffId || "";
+      }
 
-    if (error) {
-      toast({ title: "Error registering user", description: error.message });
+      const { error } = await supabase.from("profiles").insert([userData]);
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        toast({ 
+          title: "Error registering user", 
+          description: error.message,
+          variant: "destructive" 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      toast({
+        title: "User registered",
+        description: `${userData.name} has been successfully registered.`,
+      });
+
       setIsSubmitting(false);
-      return;
+      navigate("/users");
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      toast({ 
+        title: "Error registering user", 
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive" 
+      });
+      setIsSubmitting(false);
     }
-
-    toast({
-      title: "User registered",
-      description: `${userData.name} has been successfully registered.`,
-    });
-
-    setIsSubmitting(false);
-    navigate("/users");
   };
 
   return (

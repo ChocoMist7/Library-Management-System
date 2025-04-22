@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 
 interface AvatarFormProps {
   initialImageUrl?: string;
-  onImageChange: (url: string) => void;
+  onImageChange: (url: string, file?: File) => void;
 }
 
 export function AvatarForm({ initialImageUrl, onImageChange }: AvatarFormProps) {
@@ -29,6 +29,14 @@ export function AvatarForm({ initialImageUrl, onImageChange }: AvatarFormProps) 
       return;
     }
 
+    // Pass both the file and a temporary local URL
+    const tempUrl = URL.createObjectURL(file);
+    setImageUrl(tempUrl);
+    onImageChange(tempUrl, file);
+    
+    // For immediate upload option (currently not used to avoid double uploads)
+    // We just pass the file to the parent component to handle during form submission
+    /*
     setIsUploading(true);
     
     try {
@@ -53,6 +61,7 @@ export function AvatarForm({ initialImageUrl, onImageChange }: AvatarFormProps) 
     } finally {
       setIsUploading(false);
     }
+    */
   };
 
   return (
