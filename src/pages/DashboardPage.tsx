@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
@@ -86,6 +87,14 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
+  // Define the chart configuration for the ChartContainer
+  const chartConfig = {
+    books: {
+      label: "Books",
+      color: "#1890FF",
+    },
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -147,7 +156,10 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer className="h-[300px]">
+            <ChartContainer 
+              className="h-[300px]" 
+              config={chartConfig}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData.categories.map((cat, i) => ({ name: cat, count: chartData.issuedCount[i] }))}>
                   <CartesianGrid strokeDasharray="3 3" />
