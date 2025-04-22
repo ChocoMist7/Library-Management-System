@@ -15,7 +15,7 @@ export default function SearchPage() {
         </p>
       </div>
       
-      <SearchResults initialQuery={query} />
+      <SearchResults query={query} />
     </div>
   );
 }

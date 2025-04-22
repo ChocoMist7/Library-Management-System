@@ -2,15 +2,16 @@
 import { useState, useEffect } from "react";
 import { SearchResult } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 type SearchResultsProps = {
   query: string;
-  onResultSelect: (result: SearchResult) => void;
 };
 
-export function SearchResults({ query, onResultSelect }: SearchResultsProps) {
+export function SearchResults({ query }: SearchResultsProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!query || query.length < 2) {
@@ -63,6 +64,14 @@ export function SearchResults({ query, onResultSelect }: SearchResultsProps) {
     return () => clearTimeout(timer);
   }, [query]);
 
+  const handleResultSelect = (result: SearchResult) => {
+    if (result.type === "book") {
+      navigate(`/books/${result.id}`);
+    } else if (result.type === "user") {
+      navigate(`/users/${result.id}`);
+    }
+  };
+
   return (
     <div className="p-1">
       {isSearching ? (
@@ -81,7 +90,7 @@ export function SearchResults({ query, onResultSelect }: SearchResultsProps) {
             <button
               key={`${result.type}-${result.id}`}
               className="w-full rounded-md p-2 text-left hover:bg-accent"
-              onClick={() => onResultSelect(result)}
+              onClick={() => handleResultSelect(result)}
             >
               <div className="flex items-center gap-2">
                 {result.imageUrl ? (

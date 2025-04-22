@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Chart } from "@/components/ui/chart";
+import { ChartContainer } from "@/components/ui/chart";
 import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -22,14 +22,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchDashboardData() {
       try {
-        // Fetch books statistics
         const { data: booksData, error: booksError } = await supabase
           .from('books')
           .select('id, available_copies, total_copies, category');
         
         if (booksError) throw booksError;
         
-        // Fetch users statistics
         const { data: studentsData, error: studentsError } = await supabase
           .from('profiles')
           .select('count')
@@ -42,14 +40,12 @@ export default function DashboardPage() {
           
         if (studentsError || teachersError) throw studentsError || teachersError;
         
-        // Fetch book issues
         const { data: issuesData, error: issuesError } = await supabase
           .from('book_issues')
           .select('status');
           
         if (issuesError) throw issuesError;
         
-        // Calculate statistics
         const totalBooks = booksData?.length || 0;
         const availableBooks = booksData?.reduce((sum, book) => sum + (book.available_copies || 0), 0) || 0;
         
@@ -59,7 +55,6 @@ export default function DashboardPage() {
         const totalIssued = issuesData?.filter(issue => issue.status === 'issued').length || 0;
         const totalOverdue = issuesData?.filter(issue => issue.status === 'overdue').length || 0;
         
-        // Update stats
         setStats({
           totalBooks,
           availableBooks,
@@ -69,7 +64,6 @@ export default function DashboardPage() {
           totalOverdue,
         });
         
-        // Calculate category distribution for chart
         const categories = {};
         booksData?.forEach(book => {
           if (book.category) {
@@ -77,15 +71,13 @@ export default function DashboardPage() {
           }
         });
         
-        // Convert to chart format
-        const categoryNames = Object.keys(categories).slice(0, 5); // Top 5 categories
+        const categoryNames = Object.keys(categories).slice(0, 5);
         const categoryCounts = categoryNames.map(name => categories[name]);
         
         setChartData({
           categories: categoryNames,
           issuedCount: categoryCounts,
         });
-        
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
@@ -155,33 +147,17 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Chart
-              type="bar"
-              data={{
-                labels: chartData.categories,
-                datasets: [
-                  {
-                    label: "Books",
-                    data: chartData.issuedCount,
-                    backgroundColor: "rgba(24, 144, 255, 0.5)",
-                    borderColor: "rgb(24, 144, 255)",
-                    borderWidth: 1,
-                  },
-                ],
-              }}
-              options={{
-                responsive: true,
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      precision: 0,
-                    },
-                  },
-                },
-              }}
-              height={300}
-            />
+            <ChartContainer className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.categories.map((cat, i) => ({ name: cat, count: chartData.issuedCount[i] }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#1890FF" name="Books" />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
         <Card className="lg:col-span-3">

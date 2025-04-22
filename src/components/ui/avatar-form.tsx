@@ -55,11 +55,6 @@ export function AvatarForm({ initialImageUrl, onImageChange }: AvatarFormProps) 
     }
   };
 
-  // Generate initials from name for avatar fallback
-  const getInitials = () => {
-    return "U";
-  };
-
   return (
     <div className="flex flex-col items-center gap-4">
       <Avatar className="h-24 w-24">
