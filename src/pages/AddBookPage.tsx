@@ -21,9 +21,22 @@ export default function AddBookPage() {
       
       // If there's a file to upload
       if (data.coverImageFile instanceof File) {
-        const { url, error } = await uploadFile("books", data.coverImageFile);
-        if (error) throw error;
-        coverImageUrl = url;
+        try {
+          const { url, error } = await uploadFile("books", data.coverImageFile);
+          if (error) {
+            throw error;
+          }
+          coverImageUrl = url;
+        } catch (uploadError) {
+          console.error("Image upload error:", uploadError);
+          toast({
+            title: "Image Upload Failed",
+            description: "Could not upload the book cover image. Please try again.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
       
       const uniqueBookId = data.uniqueBookId || generateBookId();
@@ -57,8 +70,8 @@ export default function AddBookPage() {
     } catch (error) {
       console.error("Error adding book:", error);
       toast({
-        title: "Failed to add book",
-        description: "An error occurred while adding the book. Please try again.",
+        title: "Failed to Add Book",
+        description: "An error occurred while adding the book. Please check your internet connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -89,3 +102,4 @@ export default function AddBookPage() {
     </div>
   );
 }
+
