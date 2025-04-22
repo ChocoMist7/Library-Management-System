@@ -1,187 +1,242 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { books, students, teachers, bookIssues } from "@/lib/data";
-import { Link } from "react-router-dom";
-import { Book, Users, BookOpen, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Chart } from "@/components/ui/chart";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function DashboardPage() {
-  const [statistics, setStatistics] = useState({
+  const [stats, setStats] = useState({
     totalBooks: 0,
     availableBooks: 0,
-    issuedBooks: 0,
-    totalUsers: 0,
-    overdueBooks: 0
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalIssued: 0,
+    totalOverdue: 0,
+  });
+
+  const [chartData, setChartData] = useState({
+    categories: [],
+    issuedCount: [],
   });
 
   useEffect(() => {
-    // Calculate statistics
-    const totalBooks = books.reduce((sum, book) => sum + book.totalCopies, 0);
-    const availableBooks = books.reduce((sum, book) => sum + book.availableCopies, 0);
-    const issuedBooks = totalBooks - availableBooks;
-    const totalUsers = students.length + teachers.length;
+    async function fetchDashboardData() {
+      try {
+        // Fetch books statistics
+        const { data: booksData, error: booksError } = await supabase
+          .from('books')
+          .select('id, available_copies, total_copies, category');
+        
+        if (booksError) throw booksError;
+        
+        // Fetch users statistics
+        const { data: studentsData, error: studentsError } = await supabase
+          .from('profiles')
+          .select('count')
+          .eq('role', 'student');
+          
+        const { data: teachersData, error: teachersError } = await supabase
+          .from('profiles')
+          .select('count')
+          .eq('role', 'teacher');
+          
+        if (studentsError || teachersError) throw studentsError || teachersError;
+        
+        // Fetch book issues
+        const { data: issuesData, error: issuesError } = await supabase
+          .from('book_issues')
+          .select('status');
+          
+        if (issuesError) throw issuesError;
+        
+        // Calculate statistics
+        const totalBooks = booksData?.length || 0;
+        const availableBooks = booksData?.reduce((sum, book) => sum + (book.available_copies || 0), 0) || 0;
+        
+        const totalStudents = studentsData?.[0]?.count || 0;
+        const totalTeachers = teachersData?.[0]?.count || 0;
+        
+        const totalIssued = issuesData?.filter(issue => issue.status === 'issued').length || 0;
+        const totalOverdue = issuesData?.filter(issue => issue.status === 'overdue').length || 0;
+        
+        // Update stats
+        setStats({
+          totalBooks,
+          availableBooks,
+          totalStudents,
+          totalTeachers,
+          totalIssued,
+          totalOverdue,
+        });
+        
+        // Calculate category distribution for chart
+        const categories = {};
+        booksData?.forEach(book => {
+          if (book.category) {
+            categories[book.category] = (categories[book.category] || 0) + 1;
+          }
+        });
+        
+        // Convert to chart format
+        const categoryNames = Object.keys(categories).slice(0, 5); // Top 5 categories
+        const categoryCounts = categoryNames.map(name => categories[name]);
+        
+        setChartData({
+          categories: categoryNames,
+          issuedCount: categoryCounts,
+        });
+        
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      }
+    }
     
-    // Count overdue books
-    const today = new Date();
-    const overdueBooks = bookIssues.filter(issue => 
-      issue.status === "issued" && 
-      new Date(issue.returnDate) < today
-    ).length;
-    
-    setStatistics({
-      totalBooks,
-      availableBooks,
-      issuedBooks,
-      totalUsers,
-      overdueBooks
-    });
+    fetchDashboardData();
   }, []);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col space-y-2">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome to BookWise Library Management System
+          Overview of the library management system
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Total Books" 
-          value={statistics.totalBooks.toString()}
-          description="Total books in library"
-          icon={<Book className="h-5 w-5" />}
-          iconClass="bg-blue-100 text-blue-600"
-          linkTo="/books"
-        />
-        
-        <StatCard 
-          title="Available Books" 
-          value={statistics.availableBooks.toString()}
-          description="Books available for issue"
-          icon={<BookOpen className="h-5 w-5" />}
-          iconClass="bg-green-100 text-green-600"
-          linkTo="/books"
-        />
-        
-        <StatCard 
-          title="Issued Books" 
-          value={statistics.issuedBooks.toString()}
-          description="Currently issued books"
-          icon={<BookOpen className="h-5 w-5" />}
-          iconClass="bg-amber-100 text-amber-600"
-          linkTo="/books"
-        />
-        
-        <StatCard 
-          title="Registered Users" 
-          value={statistics.totalUsers.toString()}
-          description="Students and teachers"
-          icon={<Users className="h-5 w-5" />}
-          iconClass="bg-purple-100 text-purple-600"
-          linkTo="/users"
-        />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-full lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Books
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col space-y-2">
-              <Button asChild>
-                <Link to="/books/add">Add New Book</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/users/register">Register User</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/search">Search Records</Link>
-              </Button>
-            </div>
+            <div className="text-2xl font-bold">{stats.totalBooks}</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Available Books
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.availableBooks}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Students
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalStudents}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Teachers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalTeachers}</div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <Card className="col-span-full lg:col-span-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Recently Added Books</CardTitle>
+            <CardTitle>Book Categories Distribution</CardTitle>
             <CardDescription>
-              The latest books added to your library
+              Distribution of books by category
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {books.slice(0, 3).map(book => (
-                <Link
-                  key={book.id}
-                  to={`/books/${book.id}`}
-                  className="flex items-center gap-4 p-3 rounded-md hover:bg-muted transition-colors"
-                >
-                  <div className="h-12 w-12 rounded overflow-hidden">
-                    <img 
-                      src={book.coverImageUrl || "https://via.placeholder.com/100x150?text=No+Cover"} 
-                      alt={book.title}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h3 className="font-medium">{book.title}</h3>
-                    <p className="text-sm text-muted-foreground">by {book.author}</p>
-                  </div>
-                </Link>
-              ))}
+            <Chart
+              type="bar"
+              data={{
+                labels: chartData.categories,
+                datasets: [
+                  {
+                    label: "Books",
+                    data: chartData.issuedCount,
+                    backgroundColor: "rgba(24, 144, 255, 0.5)",
+                    borderColor: "rgb(24, 144, 255)",
+                    borderWidth: 1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      precision: 0,
+                    },
+                  },
+                },
+              }}
+              height={300}
+            />
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Book Status</CardTitle>
+            <CardDescription>Currently issued and overdue books</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-8">
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <div className="mr-2 h-4 w-4 rounded-full bg-blue-500" />
+                  <div className="text-sm font-medium">Currently Issued</div>
+                  <div className="ml-auto">{stats.totalIssued}</div>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted">
+                  <div
+                    className="h-2 rounded-full bg-blue-500"
+                    style={{
+                      width: `${
+                        stats.totalIssued > 0
+                          ? (stats.totalIssued /
+                              (stats.totalIssued + stats.totalOverdue)) *
+                            100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <div className="mr-2 h-4 w-4 rounded-full bg-red-500" />
+                  <div className="text-sm font-medium">Overdue</div>
+                  <div className="ml-auto">{stats.totalOverdue}</div>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted">
+                  <div
+                    className="h-2 rounded-full bg-red-500"
+                    style={{
+                      width: `${
+                        stats.totalOverdue > 0
+                          ? (stats.totalOverdue /
+                              (stats.totalIssued + stats.totalOverdue)) *
+                            100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
-}
-
-interface StatCardProps {
-  title: string;
-  value: string;
-  description: string;
-  icon: React.ReactNode;
-  iconClass?: string;
-  linkTo?: string;
-}
-
-function StatCard({ title, value, description, icon, iconClass, linkTo }: StatCardProps) {
-  const content = (
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-        <div className={`rounded-full p-2 ${iconClass}`}>
-          {icon}
-        </div>
-      </div>
-      <div className="mt-4">
-        <h3 className="font-semibold">{title}</h3>
-      </div>
-    </CardContent>
-  );
-  
-  if (linkTo) {
-    return (
-      <Card className="overflow-hidden transition-all hover:shadow-md">
-        <Link to={linkTo}>
-          {content}
-        </Link>
-      </Card>
-    );
-  }
-  
-  return (
-    <Card className="overflow-hidden">
-      {content}
-    </Card>
   );
 }

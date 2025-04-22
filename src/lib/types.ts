@@ -44,6 +44,7 @@ export interface Book {
   totalCopies: number;
   availableCopies: number;
   coverImageUrl: string;
+  coverImageFile?: File; // For temporary file storage during upload
   addedAt: Date;
   updatedAt: Date;
   description?: string;

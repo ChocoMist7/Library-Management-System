@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { Book } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { generateBookId } from "@/lib/data";
 import { uploadFile } from "@/lib/supabase-upload";
+import { generateBookId } from "@/lib/data";
 
 export default function AddBookPage() {
   const navigate = useNavigate();
@@ -16,54 +16,54 @@ export default function AddBookPage() {
   const handleAddBook = async (data: Partial<Book>) => {
     setIsSubmitting(true);
 
-    let coverImageUrl = "";
-    // Handle image upload if there's a file
-    if (data.coverImageFile) {
-      const { url, error: uploadError } = await uploadFile("book-covers", data.coverImageFile);
-      if (uploadError) {
-        toast({
-          title: "Image upload failed",
-          description: uploadError.message,
-        });
-        setIsSubmitting(false);
-        return;
+    try {
+      let coverImageUrl = data.coverImageUrl || null;
+      
+      // If there's a file to upload
+      if (data.coverImageFile instanceof File) {
+        const { url, error } = await uploadFile("books", data.coverImageFile);
+        if (error) throw error;
+        coverImageUrl = url;
       }
-      coverImageUrl = url;
-    }
+      
+      const uniqueBookId = data.uniqueBookId || generateBookId();
 
-    // Insert new book into Supabase
-    const { error } = await supabase.from("books").insert([
-      {
-        unique_book_id: data.uniqueBookId || generateBookId(),
-        title: data.title || "",
-        author: data.author || "",
-        isbn: data.isbn || "",
-        category: data.category || "",
-        publication_year: data.publicationYear || new Date().getFullYear(),
-        publisher: data.publisher || "",
+      const bookData = {
+        unique_book_id: uniqueBookId,
+        title: data.title,
+        author: data.author,
+        isbn: data.isbn,
+        category: data.category,
+        publication_year: data.publicationYear,
+        publisher: data.publisher,
         total_copies: data.totalCopies || 1,
         available_copies: data.totalCopies || 1,
         cover_image_url: coverImageUrl,
-        description: data.description,
-      },
-    ]);
+        description: data.description || null,
+      };
 
-    if (error) {
+      const { error } = await supabase.from("books").insert([bookData]);
+
+      if (error) {
+        throw error;
+      }
+
       toast({
-        title: "Error adding book",
-        description: error.message,
+        title: "Book Added",
+        description: `${data.title} has been successfully added to the library.`,
       });
+
+      navigate("/books");
+    } catch (error) {
+      console.error("Error adding book:", error);
+      toast({
+        title: "Failed to add book",
+        description: "An error occurred while adding the book. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    toast({
-      title: "Book added",
-      description: `"${data.title}" has been added to the library.`,
-    });
-
-    setIsSubmitting(false);
-    navigate("/books");
   };
 
   return (
@@ -71,7 +71,7 @@ export default function AddBookPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Add New Book</h1>
         <p className="text-muted-foreground">
-          Add a new book to your library collection
+          Add a new book to the library collection
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default function AddBookPage() {
         <CardHeader>
           <CardTitle>Book Details</CardTitle>
           <CardDescription>
-            Enter the details of the book you want to add to the library.
+            Enter the details of the book to add it to the library
           </CardDescription>
         </CardHeader>
         <CardContent>
