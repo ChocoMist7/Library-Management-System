@@ -7,6 +7,7 @@ import { User } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile } from "@/lib/supabase-upload";
+import { generateId } from "@/lib/data";
 
 export default function RegisterUserPage() {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ export default function RegisterUserPage() {
     setIsSubmitting(true);
 
     try {
+      // Generate a unique ID for the user profile
+      const userId = generateId();
+      
       // Handle image upload if there's a file
       let avatarUrl = data.imageUrl || null;
       
@@ -45,12 +49,12 @@ export default function RegisterUserPage() {
         }
       }
 
-      // The correct method is to invite/add an auth user, but for demo, we'll just insert profile.
-      const fakeEmail = data.email || "";
+      // Prepare the base user data
       const userData: any = {
+        id: userId,
         name: data.name || "",
         role: data.role,
-        email: fakeEmail,
+        email: data.email || "",
         avatar_url: avatarUrl,
         created_at: new Date().toISOString(),
       };
@@ -67,6 +71,7 @@ export default function RegisterUserPage() {
         userData.staff_id = (data as any).staffId || "";
       }
 
+      // Insert the profile data
       const { error } = await supabase.from("profiles").insert([userData]);
 
       if (error) {
