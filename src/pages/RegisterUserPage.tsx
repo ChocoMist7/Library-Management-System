@@ -7,7 +7,7 @@ import { User } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile } from "@/lib/supabase-upload";
-import { generateId } from "@/lib/data";
+import { v4 as uuidv4 } from "uuid";
 
 export default function RegisterUserPage() {
   const navigate = useNavigate();
@@ -17,8 +17,8 @@ export default function RegisterUserPage() {
     setIsSubmitting(true);
 
     try {
-      // Generate a unique ID for the user profile
-      const userId = generateId();
+      // Generate a proper UUID for the user profile
+      const userId = uuidv4();
       
       // Handle image upload if there's a file
       let avatarUrl = data.imageUrl || null;
