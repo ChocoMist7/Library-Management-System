@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { BookForm } from "@/components/books/book-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,38 +19,23 @@ export default function AddBookPage() {
     try {
       let coverImageUrl = data.coverImageUrl || null;
       
-      // If there's a file to upload
       if (data.coverImageFile instanceof File) {
-        try {
-          const { url, error } = await uploadFile("books", data.coverImageFile);
-          if (error) {
-            console.error("Upload error details:", error);
-            toast({
-              title: "Image Upload Failed",
-              description: `Could not upload the book cover image: ${error.message}`,
-              variant: "destructive",
-            });
-            setIsSubmitting(false);
-            return;
-          }
-          coverImageUrl = url;
-        } catch (uploadError) {
-          console.error("Image upload error:", uploadError);
+        const { url, error } = await uploadFile("books", data.coverImageFile);
+        if (error) {
+          console.error("Upload error:", error);
           toast({
             title: "Image Upload Failed",
-            description: "Could not upload the book cover image. Please try again.",
+            description: error.message,
             variant: "destructive",
           });
           setIsSubmitting(false);
           return;
         }
+        coverImageUrl = url;
       }
-      
-      const uniqueBookId = data.uniqueBookId || generateBookId();
 
-      // Convert data to match the database schema column names
       const bookData = {
-        unique_book_id: uniqueBookId,
+        unique_book_id: generateBookId(),
         title: data.title,
         author: data.author,
         isbn: data.isbn,
@@ -62,28 +46,34 @@ export default function AddBookPage() {
         available_copies: data.totalCopies || 1,
         cover_image_url: coverImageUrl,
         description: data.description || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      console.log("Sending to database:", bookData);
-      const { data: insertedData, error } = await supabase.from("books").insert([bookData]).select();
+      console.log("Inserting book data:", bookData);
+      
+      const { data: insertedBook, error: insertError } = await supabase
+        .from("books")
+        .insert([bookData])
+        .select();
 
-      if (error) {
-        console.error("Database error:", error);
-        throw error;
+      if (insertError) {
+        console.error("Database error:", insertError);
+        throw insertError;
       }
 
-      console.log("Book added successfully:", insertedData);
+      console.log("Book added successfully:", insertedBook);
       toast({
-        title: "Book Added",
-        description: `${data.title} has been successfully added to the library.`,
+        title: "Success",
+        description: "Book has been added successfully",
       });
 
       navigate("/books");
     } catch (error) {
       console.error("Error adding book:", error);
       toast({
-        title: "Failed to Add Book",
-        description: "An error occurred while adding the book. Please check your internet connection and try again.",
+        title: "Error",
+        description: "Failed to add book. Please try again.",
         variant: "destructive",
       });
     } finally {

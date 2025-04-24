@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { UserForm } from "@/components/users/user-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,91 +17,73 @@ export default function RegisterUserPage() {
     console.log("Submitting user data:", data);
 
     try {
-      // Generate a proper UUID for the user profile
-      const userId = uuidv4();
-      
-      // Handle image upload if there's a file
       let avatarUrl = data.imageUrl || null;
       
       if (data.imageFile instanceof File) {
-        try {
-          const { url, error } = await uploadFile("avatars", data.imageFile);
-          if (error) {
-            console.error("Avatar upload error details:", error);
-            toast({
-              title: "Image Upload Failed",
-              description: `Could not upload the profile image: ${error.message}`,
-              variant: "destructive",
-            });
-            setIsSubmitting(false);
-            return;
-          }
-          avatarUrl = url;
-        } catch (uploadError) {
-          console.error("Image upload error:", uploadError);
+        const { url, error } = await uploadFile("avatars", data.imageFile);
+        if (error) {
+          console.error("Upload error:", error);
           toast({
             title: "Image Upload Failed",
-            description: "Could not upload the profile image. Please try again.",
+            description: error.message,
             variant: "destructive",
           });
           setIsSubmitting(false);
           return;
         }
+        avatarUrl = url;
       }
 
-      // Prepare the base user data matching database schema column names
-      const userData: any = {
+      const userId = uuidv4();
+      const userData = {
         id: userId,
-        name: data.name || "",
+        name: data.name,
+        email: data.email,
         role: data.role,
-        email: data.email || "",
         avatar_url: avatarUrl,
         created_at: new Date().toISOString(),
+        // Role-specific fields
+        ...(data.role === 'student' && {
+          roll_number: (data as any).rollNumber,
+          degree: (data as any).degree,
+          stream: (data as any).stream,
+        }),
+        ...(data.role === 'teacher' && {
+          teacher_id: (data as any).teacherId,
+          department: (data as any).department,
+        }),
+        ...(data.role === 'librarian' && {
+          staff_id: (data as any).staffId,
+        }),
       };
 
-      // Role-specific fields
-      if (data.role === "student") {
-        userData.roll_number = (data as any).rollNumber || "";
-        userData.degree = (data as any).degree || "";
-        userData.stream = (data as any).stream || "";
-      } else if (data.role === "teacher") {
-        userData.teacher_id = (data as any).teacherId || "";
-        userData.department = (data as any).department || "";
-      } else if (data.role === "librarian") {
-        userData.staff_id = (data as any).staffId || "";
-      }
-
-      console.log("Sending to database:", userData);
+      console.log("Inserting user data:", userData);
       
-      // Insert the profile data and get the inserted record
-      const { data: insertedData, error } = await supabase.from("profiles").insert([userData]).select();
+      const { data: insertedUser, error: insertError } = await supabase
+        .from("profiles")
+        .insert([userData])
+        .select();
 
-      if (error) {
-        console.error("Database insert error:", error);
-        toast({ 
-          title: "Error registering user", 
-          description: error.message,
-          variant: "destructive" 
-        });
-        setIsSubmitting(false);
-        return;
+      if (insertError) {
+        console.error("Database error:", insertError);
+        throw insertError;
       }
 
-      console.log("User registered successfully:", insertedData);
+      console.log("User registered successfully:", insertedUser);
       toast({
-        title: "User registered",
-        description: `${userData.name} has been successfully registered.`,
+        title: "Success",
+        description: "User has been registered successfully",
       });
 
-      setIsSubmitting(false);
       navigate("/users");
     } catch (error) {
-      console.error("Unexpected error:", error);
-      toast({ 
-        title: "Error registering user", 
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive" 
+      console.error("Error registering user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to register user. Please try again.",
+        variant: "destructive",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
