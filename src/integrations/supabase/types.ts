@@ -67,6 +67,7 @@ export type Database = {
           category: string
           cover_image_url: string | null
           created_at: string | null
+          description: string | null
           id: string
           isbn: string
           publication_year: number
@@ -82,6 +83,7 @@ export type Database = {
           category: string
           cover_image_url?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           isbn: string
           publication_year: number
@@ -97,6 +99,7 @@ export type Database = {
           category?: string
           cover_image_url?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           isbn?: string
           publication_year?: number

@@ -59,6 +59,7 @@ export default function AddBookPage() {
         total_copies: data.totalCopies || 1,
         available_copies: data.totalCopies || 1,
         cover_image_url: coverImageUrl,
+        // Added description field here
         description: data.description || null,
       };
 
