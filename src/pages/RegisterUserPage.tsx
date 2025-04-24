@@ -15,6 +15,7 @@ export default function RegisterUserPage() {
 
   const handleRegisterUser = async (data: Partial<User>) => {
     setIsSubmitting(true);
+    console.log("Submitting user data:", data);
 
     try {
       // Generate a proper UUID for the user profile
@@ -49,7 +50,7 @@ export default function RegisterUserPage() {
         }
       }
 
-      // Prepare the base user data
+      // Prepare the base user data matching database schema column names
       const userData: any = {
         id: userId,
         name: data.name || "",
@@ -71,11 +72,13 @@ export default function RegisterUserPage() {
         userData.staff_id = (data as any).staffId || "";
       }
 
-      // Insert the profile data
-      const { error } = await supabase.from("profiles").insert([userData]);
+      console.log("Sending to database:", userData);
+      
+      // Insert the profile data and get the inserted record
+      const { data: insertedData, error } = await supabase.from("profiles").insert([userData]).select();
 
       if (error) {
-        console.error("Supabase insert error:", error);
+        console.error("Database insert error:", error);
         toast({ 
           title: "Error registering user", 
           description: error.message,
@@ -85,6 +88,7 @@ export default function RegisterUserPage() {
         return;
       }
 
+      console.log("User registered successfully:", insertedData);
       toast({
         title: "User registered",
         description: `${userData.name} has been successfully registered.`,

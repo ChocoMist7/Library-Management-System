@@ -15,6 +15,7 @@ export default function AddBookPage() {
 
   const handleAddBook = async (data: Partial<Book>) => {
     setIsSubmitting(true);
+    console.log("Submitting book data:", data);
 
     try {
       let coverImageUrl = data.coverImageUrl || null;
@@ -48,6 +49,7 @@ export default function AddBookPage() {
       
       const uniqueBookId = data.uniqueBookId || generateBookId();
 
+      // Convert data to match the database schema column names
       const bookData = {
         unique_book_id: uniqueBookId,
         title: data.title,
@@ -59,16 +61,18 @@ export default function AddBookPage() {
         total_copies: data.totalCopies || 1,
         available_copies: data.totalCopies || 1,
         cover_image_url: coverImageUrl,
-        // Added description field here
         description: data.description || null,
       };
 
-      const { error } = await supabase.from("books").insert([bookData]);
+      console.log("Sending to database:", bookData);
+      const { data: insertedData, error } = await supabase.from("books").insert([bookData]).select();
 
       if (error) {
+        console.error("Database error:", error);
         throw error;
       }
 
+      console.log("Book added successfully:", insertedData);
       toast({
         title: "Book Added",
         description: `${data.title} has been successfully added to the library.`,

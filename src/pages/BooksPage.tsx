@@ -14,6 +14,7 @@ import {
 import { Book } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 export default function BooksPage() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -27,47 +28,92 @@ export default function BooksPage() {
   useEffect(() => {
     async function fetchBooks() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("books")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (!error && data) {
+      try {
+        console.log("Fetching books from database...");
+        const { data, error } = await supabase
+          .from("books")
+          .select("*")
+          .order("created_at", { ascending: false });
+          
+        if (error) {
+          console.error("Error fetching books:", error);
+          toast({
+            title: "Failed to load books",
+            description: "Could not load books from the database. Please try again later.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Books fetched:", data);
+        
+        if (!data || data.length === 0) {
+          console.log("No books found in the database");
+          setBooks([]);
+          setDisplayedBooks([]);
+          setCategories(["all"]);
+          setLoading(false);
+          return;
+        }
+        
         const booksFromDb = data.map((b: any) => ({
-          ...b,
           id: b.id,
           uniqueBookId: b.unique_book_id,
+          title: b.title,
+          author: b.author,
+          isbn: b.isbn,
+          category: b.category,
           publicationYear: b.publication_year,
+          publisher: b.publisher,
           totalCopies: b.total_copies,
           availableCopies: b.available_copies,
           coverImageUrl: b.cover_image_url,
+          description: b.description,
           addedAt: new Date(b.created_at),
-          updatedAt: new Date(b.updated_at),
+          updatedAt: new Date(b.updated_at || b.created_at),
         }));
+        
         setBooks(booksFromDb);
         setDisplayedBooks(booksFromDb);
-        setCategories([
-          "all",
-          ...Array.from(new Set(booksFromDb.map((book) => book.category))),
-        ]);
+        
+        // Extract unique categories
+        const uniqueCategories = Array.from(
+          new Set(booksFromDb.map((book) => book.category))
+        );
+        setCategories(["all", ...uniqueCategories]);
+      } catch (err) {
+        console.error("Unexpected error fetching books:", err);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred while loading books.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
+    
     fetchBooks();
   }, []);
 
-  // Filter logic (same as before, but uses books from state)
+  // Filter logic
   useEffect(() => {
     let filtered = [...books];
+    
     if (filterCategory !== "all") {
       filtered = filtered.filter((book) => book.category === filterCategory);
     }
+    
     if (searchTerm.trim() !== "") {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter((book) =>
-        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.uniqueBookId.toLowerCase().includes(searchTerm.toLowerCase())
+        book.title.toLowerCase().includes(searchLower) ||
+        book.author.toLowerCase().includes(searchLower) ||
+        book.uniqueBookId.toLowerCase().includes(searchLower)
       );
     }
+    
     setDisplayedBooks(filtered);
   }, [books, filterCategory, searchTerm]);
 
@@ -120,6 +166,7 @@ export default function BooksPage() {
           </Select>
         </div>
       </div>
+      
       {loading ? (
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <p className="mb-2 text-muted-foreground">Loading books…</p>
@@ -128,7 +175,9 @@ export default function BooksPage() {
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <p className="mb-2 text-muted-foreground">No books found</p>
           <p className="text-sm text-muted-foreground">
-            Try changing your search or filter criteria
+            {books.length === 0 
+              ? "Your library is empty. Start by adding some books."
+              : "Try changing your search or filter criteria"}
           </p>
         </div>
       ) : (
