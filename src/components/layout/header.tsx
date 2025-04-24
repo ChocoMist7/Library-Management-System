@@ -1,15 +1,16 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Header({ className }: { className?: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const { signOut, user } = useAuth();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +46,14 @@ export function Header({ className }: { className?: string }) {
           </form>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" asChild>
-              <Link to="/help">Help</Link>
+            {user && (
+              <span className="text-sm text-muted-foreground">
+                {user.email}
+              </span>
+            )}
+            <Button variant="ghost" onClick={signOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
             </Button>
           </div>
         </div>
