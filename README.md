@@ -1,73 +1,123 @@
-# Welcome to your Lovable project
 
-## Project info
+# BookWise Harmony Library Management System
 
-**URL**: https://lovable.dev/projects/2f62b799-1bf6-4332-bcea-c1d027542b09
+A comprehensive library management system for tracking books, managing users, and handling book issues/returns.
 
-## How can I edit this code?
+## Technical Stack
 
-There are several ways of editing your application.
+- **TypeScript** - Main programming language for type-safe development across the application
+- **React** - Frontend framework used for building the user interface
+- **Vite** - Build tool and development server for fast development and optimized production builds
+- **Supabase** - Backend platform providing:
+  - Database storage for books, users, and issue records
+  - Row Level Security (RLS) for data protection
+  - Authentication and user management
+  - File storage for book covers and user avatars
+- **Tailwind CSS** - Utility-first CSS framework for styling components
+- **shadcn/ui** - Component library providing pre-built UI components like:
+  - Forms and input fields
+  - Cards and layouts
+  - Toasts for notifications
+  - Modals and dialogs
+- **React Query** - Data synchronization and caching library for managing server state
+- **React Router** - Handles client-side routing
+- **Recharts** - Library used for statistical visualizations in the dashboard
+- **UUID** - Generation of unique identifiers for books and users
 
-**Use Lovable**
+## Project Structure
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2f62b799-1bf6-4332-bcea-c1d027542b09) and start prompting.
+```
+src/
+├── components/
+│   ├── books/        # Book-related components
+│   ├── layout/       # Layout components
+│   ├── ui/           # Reusable UI components
+│   └── users/        # User management components
+├── integrations/
+│   └── supabase/     # Supabase client and type definitions
+├── lib/
+│   ├── types.ts      # TypeScript type definitions
+│   └── utils.ts      # Utility functions
+└── pages/            # Route components
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+## Database Schema
 
-**Use your preferred IDE**
+### Tables
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **profiles**
+   - Stores user information
+   - Fields: id, name, email, role, avatar_url, etc.
+   - Role-specific fields for students, teachers, and librarians
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. **books**
+   - Stores book information
+   - Fields: id, title, author, isbn, category, copies, etc.
 
-Follow these steps:
+3. **book_issues**
+   - Tracks book lending records
+   - Fields: id, book_id, user_id, issue_date, return_date, status
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Features
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- User registration and management (students, teachers, librarians)
+- Book catalog management
+- Book issue and return system
+- Dashboard with statistics
+- Search functionality for books and users
+- Image upload for book covers and user avatars
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Development Setup
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Required Environment Variables
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-**Use GitHub Codespaces**
+## TypeScript Configuration
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The project uses strict TypeScript configuration with:
+- Strict null checks
+- Strict property initialization
+- No implicit any
+- Exact optional property types
 
-## What technologies are used for this project?
+## Component Library Usage
 
-This project is built with:
+The project extensively uses shadcn/ui components. All components are located in `src/components/ui/` and are styled using Tailwind CSS utility classes.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## State Management
 
-## How can I deploy this project?
+- React Query for server state management
+- Local state managed with React's useState and useContext where appropriate
+- Supabase realtime subscriptions for live updates
 
-Simply open [Lovable](https://lovable.dev/projects/2f62b799-1bf6-4332-bcea-c1d027542b09) and click on Share -> Publish.
+## API Integration
 
-## Can I connect a custom domain to my Lovable project?
+All database operations are handled through Supabase client:
+- Direct database queries using Supabase's PostgreSQL interface
+- Row Level Security (RLS) policies for data protection
+- File storage for handling book covers and user avatars
 
-Yes, you can!
+## Testing
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+To run tests:
+```bash
+npm test
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
