@@ -1,12 +1,12 @@
+
 import { useState } from "react";
 import { BookForm } from "@/components/books/book-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Book } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { uploadFile } from "@/lib/supabase-upload";
-import { generateBookId } from "@/lib/data";
+import { addBook } from "@/lib/data";
 
 export default function AddBookPage() {
   const navigate = useNavigate();
@@ -34,34 +34,15 @@ export default function AddBookPage() {
         coverImageUrl = url;
       }
 
+      // Prepare book data with the uploaded image URL
       const bookData = {
-        unique_book_id: generateBookId(),
-        title: data.title,
-        author: data.author,
-        isbn: data.isbn,
-        category: data.category,
-        publication_year: data.publicationYear,
-        publisher: data.publisher,
-        total_copies: data.totalCopies || 1,
-        available_copies: data.totalCopies || 1,
-        cover_image_url: coverImageUrl,
-        description: data.description || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        ...data,
+        coverImageUrl,
       };
-
-      console.log("Inserting book data:", bookData);
       
-      const { data: insertedBook, error: insertError } = await supabase
-        .from("books")
-        .insert([bookData])
-        .select();
-
-      if (insertError) {
-        console.error("Database error:", insertError);
-        throw insertError;
-      }
-
+      // Use the addBook function from data.ts to insert the book
+      const insertedBook = await addBook(bookData);
+      
       console.log("Book added successfully:", insertedBook);
       toast({
         title: "Success",

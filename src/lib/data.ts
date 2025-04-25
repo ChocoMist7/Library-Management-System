@@ -14,10 +14,11 @@ export const generateBookId = () => {
 
 // Book Management Functions
 export const addBook = async (bookData: Partial<Book>) => {
-  console.log("Adding book:", bookData);
-  const { data, error } = await supabase
-    .from("books")
-    .insert([{
+  console.log("Adding book with data:", bookData);
+  
+  try {
+    // Prepare the book data for Supabase insertion
+    const bookDbData = {
       title: bookData.title,
       author: bookData.author,
       isbn: bookData.isbn,
@@ -28,18 +29,29 @@ export const addBook = async (bookData: Partial<Book>) => {
       available_copies: bookData.totalCopies || 1,
       cover_image_url: bookData.coverImageUrl,
       description: bookData.description,
-      unique_book_id: generateBookId(),
+      unique_book_id: bookData.uniqueBookId || generateBookId(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    }])
-    .select();
+    };
+    
+    console.log("Formatted book data for DB:", bookDbData);
+    
+    const { data, error } = await supabase
+      .from("books")
+      .insert([bookDbData])
+      .select();
 
-  if (error) {
-    console.error("Error adding book:", error);
-    throw error;
+    if (error) {
+      console.error("Error adding book:", error);
+      throw error;
+    }
+
+    console.log("Book added successfully:", data);
+    return data[0];
+  } catch (err) {
+    console.error("Unexpected error in addBook:", err);
+    throw err;
   }
-
-  return data[0];
 };
 
 export const deleteBook = async (bookId: string) => {
@@ -187,4 +199,3 @@ export const fetchBookIssues = async () => {
 
   return data;
 };
-
